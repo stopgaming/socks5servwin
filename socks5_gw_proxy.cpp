@@ -155,28 +155,28 @@ private:
             return INVALID_SOCKET;
         }
 
-        // Устанавливаем шлюз через маршрутизацию
+        // РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј С€Р»СЋР· С‡РµСЂРµР· РјР°СЂС€СЂСѓС‚РёР·Р°С†РёСЋ
         sockaddr_in gateway_addr{};
         gateway_addr.sin_family = AF_INET;
         inet_pton(AF_INET, gateway_addr_.c_str(), &gateway_addr.sin_addr);
 
-        // На Linux используем SO_BINDTODEVICE
+        // РќР° Linux РёСЃРїРѕР»СЊР·СѓРµРј SO_BINDTODEVICE
 #ifdef __linux__
-        const char* iface = "eth0"; // Замените на нужный интерфейс
+        const char* iface = "eth0"; // Р—Р°РјРµРЅРёС‚Рµ РЅР° РЅСѓР¶РЅС‹Р№ РёРЅС‚РµСЂС„РµР№СЃ
         if (setsockopt(target_sock, SOL_SOCKET, SO_BINDTODEVICE, iface, strlen(iface)) < 0) {
             close(target_sock);
             return INVALID_SOCKET;
         }
 #endif
 
-        // Настраиваем целевой адрес
+        // РќР°СЃС‚СЂР°РёРІР°РµРј С†РµР»РµРІРѕР№ Р°РґСЂРµСЃ
         sockaddr_in target_addr{};
         target_addr.sin_family = AF_INET;
         target_addr.sin_port = htons(request.dst_port);
 
         if (request.atyp == 0x01) { // IPv4
             inet_pton(AF_INET, request.dst_addr.c_str(), &target_addr.sin_addr);
-        } else { // Доменное имя
+        } else { // Р”РѕРјРµРЅРЅРѕРµ РёРјСЏ
             addrinfo hints{}, *res;
             hints.ai_family = AF_INET;
             hints.ai_socktype = SOCK_STREAM;
@@ -193,25 +193,25 @@ private:
             freeaddrinfo(res);
         }
 
-        // На Windows добавляем маршрут
+        // РќР° Windows РґРѕР±Р°РІР»СЏРµРј РјР°СЂС€СЂСѓС‚
 #ifdef _WIN32
         MIB_IPFORWARDROW route;
         memset(&route, 0, sizeof(route));
         route.dwForwardDest = target_addr.sin_addr.s_addr;
         route.dwForwardMask = inet_addr("255.255.255.255");
         route.dwForwardNextHop = gateway_addr.sin_addr.s_addr;
-        route.dwForwardIfIndex = 0; // Автовыбор интерфейса
+        route.dwForwardIfIndex = 0; // РђРІС‚РѕРІС‹Р±РѕСЂ РёРЅС‚РµСЂС„РµР№СЃР°
         route.dwForwardType = 4;    // Next hop
         route.dwForwardProto = 3;   // PROTO_IP_NETMGMT
         route.dwForwardAge = 0;
         route.dwForwardMetric1 = 1;
 
         if (CreateIpForwardEntry(&route) != NO_ERROR) {
-            // Если маршрут уже существует, продолжаем
+            // Р•СЃР»Рё РјР°СЂС€СЂСѓС‚ СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓРµС‚, РїСЂРѕРґРѕР»Р¶Р°РµРј
         }
 #endif
 
-        // Пробуем подключиться
+        // РџСЂРѕР±СѓРµРј РїРѕРґРєР»СЋС‡РёС‚СЊСЃСЏ
         if (connect(target_sock, (sockaddr*)&target_addr, sizeof(target_addr)) == SOCKET_ERROR) {
 #ifdef _WIN32
             closesocket(target_sock);
